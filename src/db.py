@@ -95,9 +95,6 @@ def setup_rls(conn):
     conn.execute("GRANT SELECT, INSERT ON chunks TO app_user;")
 
 # ---------- SEARCH FUNCTIONS (correct configuration) ----------
-# NOTE: qvec is wrapped in Vector(...) because outside of an INSERT
-# (where the destination column type gives Postgres a hint), a raw
-# Python list gets sent as float8[] and `<=>` has no such overload.
 
 def search_shared_filter(conn, tenant_id, qvec, k=5):
     return conn.execute(
@@ -242,20 +239,7 @@ def search_rls_attacker_sets_session(conn, claimed_tenant_id, qvec, k=5):
         (Vector(qvec), k)
     ).fetchall()
 
-# ---------- 2x2: IDENTITY AUTHENTICATION x WRITE POLICY STRICTNESS ----------
-# These two axes were previously conflated in a single test. This makes
-# each axis an independent, explicitly labeled experimental factor.
-#
-# Axis 1 (identity_forged: bool): whether app.tenant_id, at the moment
-#   of INSERT, has been set to the attacker's OWN true tenant (False --
-#   "authenticated") or to the VICTIM's tenant (True -- "forged"), with
-#   the row's tenant_id column value held constant at VICTIM in all
-#   cells (the attacker always attempts to write AS the victim).
-#
-# Axis 2 (write_policy: "strict" | "lax"): whether the FOR INSERT
-#   policy's WITH CHECK clause actually validates tenant_id against the
-#   session identity ("strict") or accepts any row ("lax", WITH CHECK
-#   (true)).
+
 
 def set_session_identity(conn, tenant_id):
     conn.execute("SELECT set_config('app.tenant_id', %s, false);", (tenant_id,))
@@ -302,10 +286,7 @@ def setup_split_policies_vulnerable(conn):
         CREATE POLICY tenant_write ON chunks FOR INSERT
         WITH CHECK (true);
     """)
-    # NOTE: the line above is the realistic bug -- a developer writes
-    # "WITH CHECK (true)" (or omits WITH CHECK, which Postgres then
-    # defaults to TRUE for INSERT policies with none specified) because
-    # they only thought about read-side filtering when adding this policy.
+   
 
 def setup_split_policies_fixed(conn):
     """The corrected version of the above: WITH CHECK is explicitly

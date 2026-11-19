@@ -4,12 +4,6 @@ import matplotlib.pyplot as plt
 
 df = pd.read_csv("../results/main_multiseed.csv")
 
-# Per-seed means already ARE one row per (mechanism, fault, seed) since
-# each seed run queries the full victim_queries set once. So the
-# "seed-level mean" is just ctrr_poison itself per row; we bootstrap
-# resample ACROSS SEEDS (5 values per condition), not across queries,
-# per the reviewer's point about query correlation within a seed.
-
 def seed_level_ci(group, n_boot=10000, seed=0):
     rng = np.random.default_rng(seed)
     vals = group["ctrr_poison"].values
@@ -31,4 +25,3 @@ ax.set_ylabel("Cross-Tenant Retrieval Rate (poison), mean across 5 seeds")
 ax.set_title("Leakage by mechanism and injected fault (5-seed mean)")
 plt.tight_layout()
 plt.savefig("../results/leakage_chart_multiseed.png", dpi=150)
-print("Saved results/leakage_summary_with_ci.csv and results/leakage_chart_multiseed.png")
